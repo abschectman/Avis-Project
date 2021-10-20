@@ -195,19 +195,24 @@ const format_item = (item) => {
     }
 }
 
-const format_rows = (json) => {
-    var list_items = ['title', 'subtitle', 'authors', 'number_of_pages', 'publishers', 'publish_date', 'subjects']
+const format_rows = (json, org_isbn) => {
+    var list_items = ['isbn', 'title', 'subtitle', 'authors', 'number_of_pages', 'publishers', 'publish_date', 'subjects']
     let rows = [list_items]
     let keys = Object.keys(json)
-    for (var i = 0; i < keys.length; i++) {
-        let newRow = []
-        let isbn = keys[i]
-        let book = json[isbn]
+	org_isbn = org_isbn.split(',')
 
-        for (var j = 0; j < list_items.length; j++) {
-            let current_item = list_items[j]
-            newRow.push(format_item(book[current_item]))
-        }
+    for (var i = 0; i < org_isbn.length; i++) {
+        let isbn = org_isbn[i]
+		let newRow = [isbn]
+        let book = json[isbn] || json[`ISBN:${isbn}`]
+
+		if(book) {
+			for (var j = 1; j < list_items.length; j++) {
+				let current_item = list_items[j]
+				newRow.push(format_item(book[current_item]))
+			}
+		}
+
         rows.push(newRow)
     }
     return rows
@@ -217,9 +222,9 @@ const get_element = () => {
     return Promise.resolve(document.getElementsByClassName('isbns')[0].value)
 }
 
-const generate_csv = (json) => {
+const generate_csv = (json, isbn) => {
     console.log(json)
-    let rows = format_rows(json)
+    let rows = format_rows(json, isbn)
 
     let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n")
     var encodedUri = encodeURI(csvContent);
@@ -230,6 +235,6 @@ const getInfo = () => {
         get_element().then(isbn => 
             fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`)
                 .then(response => response.json())
-                .then(json => generate_csv(json)));
+                .then(json => generate_csv(json, isbn)));
 
 }
