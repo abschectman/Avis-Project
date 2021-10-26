@@ -187,10 +187,13 @@ const format_item = (item) => {
     }
     else {
         let str = ""
-        
-        item.forEach(el => {
-            str += `${el['name']} `
-        });
+
+		for (var i = 0; i < item.length; i++) {
+			if(i < 4 ) {
+				let el = item[i]
+				str += `${el['name']} `
+			}
+		}
         return str
     }
 }
@@ -205,16 +208,22 @@ const format_rows = (json, org_isbn) => {
         let isbn = org_isbn[i]
 		let newRow = [isbn]
         let book = json[isbn] || json[`ISBN:${isbn}`]
+		console.log(book)
 
 		if(book) {
 			for (var j = 1; j < list_items.length; j++) {
 				let current_item = list_items[j]
-				newRow.push(format_item(book[current_item]))
+				formatted_item = format_item(book[current_item])
+				formatted_item ? newRow.push(format_item(book[current_item])) : newRow.push(' ')
 			}
+		} else {
+			newRow.push('')
 		}
+		console.log(newRow)
 
         rows.push(newRow)
     }
+	console.log(rows)
     return rows
 }
 
@@ -226,9 +235,25 @@ const generate_csv = (json, isbn) => {
     console.log(json)
     let rows = format_rows(json, isbn)
 
-    let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n")
-    var encodedUri = encodeURI(csvContent);
-    window.open(encodedUri);
+	var wb = XLSX.utils.book_new();
+	wb.SheetNames.push("Boooks");
+	var ws = XLSX.utils.aoa_to_sheet(rows);
+	wb.Sheets["Boooks"] = ws
+	var wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
+
+	var buf = new ArrayBuffer(wbout.length); //convert s to arrayBuffer
+	var view = new Uint8Array(buf);  //create uint8array as viewer
+	for (var i=0; i<wbout.length; i++) view[i] = wbout.charCodeAt(i) & 0xFF; //convert to octet  
+
+	let csvContent = "data:text/csv;charset=utf-8,";
+	rows.forEach(function(rowArray) {
+		let row = rowArray.join(",");
+		csvContent += row + "\r\n";
+	});
+
+	var encodedUri = encodeURI(csvContent);
+	saveAs(new Blob([buf],{type:"application/octet-stream"}), 'booooooooks.xlsx');
+	// window.open(buf);
 }
 
 const getInfo = () => {
